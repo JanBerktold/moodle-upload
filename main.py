@@ -6,11 +6,16 @@ import sys
 import gtk.gdk
 import math
 import requests
+from  config import *
 
 class CredFrame(gtk.Window):
 	
 	def __init__(self):
 		super(CredFrame, self).__init__()
+
+		logger = Static()
+		info = logger.load()
+
 		self.show()
 		self.connect("destroy", self.destroy)
 	
@@ -26,10 +31,13 @@ class CredFrame(gtk.Window):
 		label = gtk.Label("Benutzername")
 		label_pass = gtk.Label("Passwort")
 
-		self.user.set_text("jangieseler")
+		if info is not None:
+			self.user.set_text(info["user"])
+			self.secure.set_text(info["passw"])
+
+		logger.save("yo", "bitch")
+
 		self.secure.set_visibility(False)
-		self.secure.set_text("later_lol")
-		
 		box = gtk.HBox()
 		self.add(box)
 

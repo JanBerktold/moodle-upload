@@ -10,23 +10,30 @@ from  config import *
 
 class CredFrame(gtk.Window):
 	
-	def __init__(self):
-		super(CredFrame, self).__init__()
+	def __create(self):
+                self.set_title("Schulnetz")
+                self.resize(350, 100)
+                self.set_border_width(10)
+                self.set_position(gtk.WIN_POS_CENTER)
 
-		logger = Static()
-		info = logger.load()
-
-		self.show()
-		self.connect("destroy", self.destroy)
+                self.login = gtk.Button(label = "Login")
+                self.user = gtk.Entry()
+                self.secure = gtk.Entry()
+		self.save_secure = gtk.CheckButton(label = "Passwort merken")
 	
-		self.set_title("Schulnetz")
-		self.resize(350, 100)
-		self.set_border_width(10)
-		self.set_position(gtk.WIN_POS_CENTER)
+		self.show()
 
-		self.login = gtk.Button(label = "Login")
-		self.user = gtk.Entry()
-		self.secure = gtk.Entry()
+	def __init__(self, master):
+		super(CredFrame, self).__init__()
+		self.master = master
+
+		self.logger = Static()
+		info = self.logger.load()
+
+		self.__create()
+
+                self.connect("destroy", self.destroy)
+		self.login_connect = self.login.connect("clicked", self.attempt_login)
 
 		label = gtk.Label("Benutzername")
 		label_pass = gtk.Label("Passwort")
@@ -34,8 +41,8 @@ class CredFrame(gtk.Window):
 		if info is not None:
 			self.user.set_text(info["user"])
 			self.secure.set_text(info["passw"])
-
-		logger.save("yo", "bitch")
+			if len(info["passw"]) > 0:
+				self.save_secure.set_active(True)
 
 		self.secure.set_visibility(False)
 		box = gtk.HBox()
@@ -49,10 +56,31 @@ class CredFrame(gtk.Window):
 		table.attach(self.user, 1, 3, 0, 1)
 		table.attach(self.secure, 1, 3, 1, 2)
 		table.attach(self.login, 3, 5, 1, 3)
+		table.attach(self.save_secure, 3, 5, 3, 4)
 		container.put(table, 0, 0)
 
 		box.add(container)
 		self.show_all()
+
+	def set_enabled(self, new):
+		self.login.set_sensitive(new)
+		self.secure.set_sensitive(new)
+		self.user.set_sensitive(new)
+		self.save_secure.set_sensitive(new)
+
+	def attempt_login(self, event = None):
+		self.login.disconnect(self.login_connect)
+		self.set_enabled(False)
+	
+		user = self.user.get_text()
+		passw = self.secure.get_text()
+		if self.master.login(user, passw):
+			if not self.save_secure.get_active():
+				passw = ""
+			self.logger.save(user, passw)
+		else:
+			self.login_connect = self.login.connect("clicked", self.attempt_login)
+			self.set_enabled(True)
 
 	def destroy(self, event):
 		gtk.main_quit()
@@ -67,13 +95,17 @@ class Uploader():
 	def __init__(self):
 		self.session = requests.session()
 
-	def login(username, password):
-		request = session.post("http://aeg-schulnetz.de/login/index.php", {"username":username, "password":password})
-		##todo: validate
+	def login(self, username, password, info = False):
+		self.session = requests.session()
+		request = self.session.post("http://aeg-schulnetz.de/login/index.php", {"username":username, "password":password})
+		if info:
+			print("not implemented")		
+		else:
+			return request.text.find("Du bist angemeldet als") > 0
 
 	def upload(self, startX, startY, endX, endY):
 		self.save_screen(startX, startY, endX, endY)
-		data = CredFrame().response()
+		data = CredFrame(self).response()
 
 	def save_screen(self, startX, startY, endX, endY):
 		width = int(math.fabs(endX - startX))
